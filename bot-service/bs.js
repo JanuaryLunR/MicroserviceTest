@@ -10,15 +10,14 @@ let nats = NATS.connect();
 app.use(express.json());
 
 const bot = new Telegraf('7964205419:AAEEoro2M3ksJd-U3lwbLaWY3WDQKUdbjBA');
-const redis = new Redis(); // Подключение к Redis, по умолчанию localhost:6379
-const CHAT_IDS_KEY = 'chat_ids'; // Ключ для хранения ID чатов в Redis
+const redis = new Redis();
+const CHAT_IDS_KEY = 'chat_ids';
 
 async function saveData(key, value) {
   try {
     await redis.set(key, JSON.stringify(value));
-    console.log(`Данные сохранены: ${key} -> ${JSON.stringify(value)}`);
   } catch (error) {
-    console.error('Ошибка при сохранении данных в Redis:', error);
+    console.error('Error when saving data in Redis:', error);
   }
 }
 
@@ -27,34 +26,31 @@ async function getData(key) {
     const data = await redis.get(key);
     return JSON.parse(data);
   } catch (error) {
-    console.error('Ошибка при извлечении данных из Redis:', error);
+    console.error('Error when retrieving data from Redis:', error);
     return null;
   }
 }
 
-// let chatIds = new Set(); // Глобальная переменная для хранения id чатов
-// // Команда /start
+// let chatIds = new Set(); 
 // bot.start((ctx) => {
 //   const chatId = ctx.chat.id;
 //   chatIds.add(chatId);
 //   ctx.reply('Вы подписались на уведомления!');
 // });
 
-// // Функция для рассылки сообщений
 // async function sendMessageToAll() {
 //   try {
 //     chatIds.forEach((chatId) => {
 //       bot.telegram.sendMessage(chatId, 'Всем привет!').catch((err) => {
-//         console.error(`Ошибка при отправке сообщения в чат ${chatId}:`, err.message);
+//         console.error(`Error sending a message to chat ${chatId}:`, err.message);
 //       });
 //     });
 //     return 'success';
 //   } catch (err) {
-//     console.error('Ошибка при получении chatIds из Redis:', err);
+//     console.error('Error getting chatIds from Redis:', err);
 //   }
 // }
 
-// Команда /start
 bot.start((ctx) => {
   const chatId = ctx.chat.id;
   // const chatId = [472587496, 100]
@@ -62,7 +58,6 @@ bot.start((ctx) => {
   ctx.reply('Вы подписались на уведомления!');
 });
 
-// Функция для рассылки сообщений
 async function sendMessageToAll(base_currency, to_currency, rate) {
   try {
     let data = await getData(CHAT_IDS_KEY)
@@ -70,16 +65,15 @@ async function sendMessageToAll(base_currency, to_currency, rate) {
     let text = `Сегодняшний курс обмена ${base_currency} на ${to_currency} равен ${rate}`
     arr.forEach((chatId) => {
       bot.telegram.sendMessage(chatId, `Всем привет! ${text}`).catch((err) => {
-        console.error(`Ошибка при отправке сообщения в чат ${chatId}:`, err.message);
+        console.error(`Error sending a message to chat ${chatId}:`, err.message);
       });
     });
     return true;
   } catch (err) {
-    console.error('Ошибка при получении chatIds из Redis:', err);
+    console.error('Error getting chatIds from Redis:', err);
   }
 }
 
-// Запуск бота
 bot.launch();
 nats.subscribe('send-rates', async (msg, reply) => {
   const obs = JSON.parse(msg)
@@ -93,7 +87,6 @@ nats.subscribe('send-rates', async (msg, reply) => {
 });
 console.log('Bot is running');
 
-// Обработка остановки
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
