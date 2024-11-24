@@ -1,16 +1,15 @@
-const express = require('express');
 const axios = require('axios');
-
+require('dotenv').config();
 
 let NATS = require('nats');
-let nats = NATS.connect();
+let nats = NATS.connect(process.env.NATS_CONNECT);
 
 nats.subscribe('getPairRate', async (msg, reply) => {
-  const obs = JSON.parse(msg)
-  let rate = await getExchangeRate(obs.body.base_currency, obs.body.to_currency);
+  const obj = JSON.parse(msg)
+  let rate = await getExchangeRate(obj.base_currency, obj.to_currency);
   let msgToBs = {
-    base_currency: obs.body.base_currency,
-    to_currency: obs.body.to_currency,
+    base_currency: obj.base_currency,
+    to_currency: obj.to_currency,
     rate: rate
   }
   nats.request('send-rates', JSON.stringify(msgToBs), (response) => {
@@ -20,13 +19,9 @@ nats.subscribe('getPairRate', async (msg, reply) => {
   nats.publish(reply, JSON.stringify(rate));
 });
 
+const exchangeApiUrl = process.env.EXCHANGEAPIURL;
+const exchangeApiKey = process.env.EXCHANGEAPIKEY;
 
-const app = express();
-const port = 4000;
-const exchangeApiUrl = 'https://api.exchangerate-api.com/v4/latest';
-const exchangeApiKey = 'your_api_key';
-
-app.use(express.json());
 
 async function getExchangeRate(baseCurrency, toCurrency) {
   try {
@@ -37,18 +32,4 @@ async function getExchangeRate(baseCurrency, toCurrency) {
   }
 }
 
-app.post('/getPairRate', async (req, res) => {
-  try {
-    const { base_currency, to_currency } = req.body;
-
-    const rate = await getExchangeRate(base_currency, to_currency);
-
-    res.json({ success: true, rate });
-  } catch (error) {
-    res.json({ success: false, error: error.message });
-  }
-});
-
-app.listen(port, () => {
-  console.log(`Currency service running at http://localhost:${port}`);
-});
+module.exports = { getExchangeRate };
